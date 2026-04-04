@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "A flashcard with AI-generated content based on Quran and Hadith.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the flashcard."
+        },
+        "topic": {
+          "type": "string",
+          "description": "The topic or question described by the admin."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "The URL or base64 data of the attached image."
+        },
+        "aiResponse": {
+          "type": "string",
+          "description": "The AI-generated response in the style of a wise narrator."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "The UID of the admin who created the card."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the card was created."
+        }
+      },
+      "required": ["title", "topic", "aiResponse", "authorId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/flashcards/{cardId}": {
+      "schema": "Flashcard",
+      "description": "Collection of all generated flashcards."
+    }
+  }
+}

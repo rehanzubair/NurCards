@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: flashcards
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required)
+    //   - topic: string (required)
+    //   - imageUrl: string (optional)
+    //   - aiResponse: string (required)
+    //   - authorId: string (required)
+    //   - createdAt: timestamp (required)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email == "bluqrguy@gmail.com";
+    }
+
+    function isOwner(authorId) {
+      return isAuthenticated() && request.auth.uid == authorId;
+    }
+
+    function isValidFlashcard(data) {
+      return data.keys().hasAll(['title', 'topic', 'aiResponse', 'authorId', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.topic is string && data.topic.size() > 0 && data.topic.size() < 2000 &&
+             data.aiResponse is string && data.aiResponse.size() > 0 &&
+             data.authorId == request.auth.uid &&
+             data.createdAt is timestamp;
+    }
+
+    // Allow connection test
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /flashcards/{cardId} {
+      // Temporarily allow full read access to diagnose 403 errors
+      allow read: if true;
+      
+      // Only the admin can create flashcards
+      allow create: if isAdmin() && isValidFlashcard(request.resource.data);
+      
+      // Only the admin can update or delete their flashcards
+      allow update: if isAdmin() && isOwner(resource.data.authorId) && isValidFlashcard(request.resource.data);
+      allow delete: if isAdmin() && isOwner(resource.data.authorId);
+    }
+  }
+}
