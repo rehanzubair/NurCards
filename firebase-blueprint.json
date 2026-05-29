@@ -13,6 +13,10 @@
           "type": "string",
           "description": "The topic or question described by the admin."
         },
+        "description": {
+          "type": "string",
+          "description": "The descriptive text shown on the card (no impact on AI generation)."
+        },
         "imageUrl": {
           "type": "string",
           "description": "The URL or base64 data of the attached image."
@@ -25,19 +29,80 @@
           "type": "string",
           "description": "The UID of the admin who created the card."
         },
+        "boardId": {
+          "type": "string",
+          "description": "The ID of the board this card belongs to."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
           "description": "The timestamp when the card was created."
         }
       },
-      "required": ["title", "topic", "aiResponse", "authorId", "createdAt"]
+      "required": ["title", "topic", "aiResponse", "authorId", "boardId", "createdAt"]
+    },
+    "Board": {
+      "title": "Board",
+      "description": "A collection of flashcards representing a specific theme or board.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the board."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the board's theme."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "The UID of the admin who created the board."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the board was created."
+        }
+      },
+      "required": ["name", "authorId", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user profile containing global settings.",
+      "type": "object",
+      "properties": {
+        "globalBackImageUrl": {
+          "type": "string",
+          "description": "The URL of the global background image for the back side of all cards."
+        },
+        "defaultBoardName": {
+          "type": "string",
+          "description": "The custom name for the default Wisdom Board."
+        },
+        "defaultBoardDescription": {
+          "type": "string",
+          "description": "The custom description for the default Wisdom Board."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the profile was last updated."
+        }
+      }
     }
   },
   "firestore": {
+    "/boards/{boardId}": {
+      "schema": "Board",
+      "description": "Collection of all created boards."
+    },
     "/flashcards/{cardId}": {
       "schema": "Flashcard",
       "description": "Collection of all generated flashcards."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles and settings."
     }
   }
 }

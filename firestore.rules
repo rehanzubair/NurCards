@@ -4,14 +4,24 @@ service cloud.firestore {
     // ===============================================================
     // Assumed Data Model
     // ===============================================================
+    // Collection: boards
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - description: string (optional)
+    //   - authorId: string (required)
+    //   - createdAt: timestamp (required)
+    //
     // Collection: flashcards
     // Document ID: auto-generated
     // Fields:
     //   - title: string (required)
     //   - topic: string (required)
+    //   - description: string (optional)
     //   - imageUrl: string (optional)
     //   - aiResponse: string (required)
     //   - authorId: string (required)
+    //   - boardId: string (required)
     //   - createdAt: timestamp (required)
     // ===============================================================
 
@@ -22,20 +32,32 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-             request.auth.token.email == "bluqrguy@gmail.com";
+             ((request.auth.token.email == "bluqrguy@gmail.com" && request.auth.token.email_verified == true) || 
+              request.auth.uid == "BaPLEVDtSNOK79epuRP9iQX7Ass1");
     }
 
     function isOwner(authorId) {
       return isAuthenticated() && request.auth.uid == authorId;
     }
 
+    function isValidBoard(data) {
+      return data.keys().hasAll(['name', 'authorId', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.authorId == request.auth.uid &&
+             data.createdAt is timestamp &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() < 1000));
+    }
+
     function isValidFlashcard(data) {
       return data.keys().hasAll(['title', 'topic', 'aiResponse', 'authorId', 'createdAt']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.topic is string && data.topic.size() > 0 && data.topic.size() < 2000 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.topic is string && data.topic.size() > 0 && data.topic.size() < 5000 &&
              data.aiResponse is string && data.aiResponse.size() > 0 &&
-             data.authorId == request.auth.uid &&
-             data.createdAt is timestamp;
+             data.authorId is string &&
+             data.createdAt is timestamp &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() < 5000)) &&
+             (!('imageUrl' in data) || data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() < 2000000)) &&
+             (!('boardId' in data) || data.boardId == null || (data.boardId is string && data.boardId.size() < 100));
     }
 
     // Allow connection test
@@ -43,16 +65,30 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    match /boards/{boardId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidBoard(request.resource.data);
+      allow update: if isAdmin() && (isOwner(resource.data.authorId) || isAdmin()) && isValidBoard(request.resource.data);
+      allow delete: if isAdmin() && (isOwner(resource.data.authorId) || isAdmin());
+    }
+
     match /flashcards/{cardId} {
       // Temporarily allow full read access to diagnose 403 errors
       allow read: if true;
       
       // Only the admin can create flashcards
-      allow create: if isAdmin() && isValidFlashcard(request.resource.data);
+      allow create: if isAdmin() && isValidFlashcard(request.resource.data) && 
+                    request.resource.data.authorId == request.auth.uid;
       
-      // Only the admin can update or delete their flashcards
-      allow update: if isAdmin() && isOwner(resource.data.authorId) && isValidFlashcard(request.resource.data);
-      allow delete: if isAdmin() && isOwner(resource.data.authorId);
+      // Only the admin can update or delete flashcards
+      allow update: if isAdmin() && isValidFlashcard(request.resource.data) &&
+                    (isOwner(resource.data.authorId) || isAdmin());
+      allow delete: if isAdmin() && (isOwner(resource.data.authorId) || isAdmin());
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) && isAdmin();
     }
   }
 }
